@@ -1,0 +1,201 @@
+import random
+from turtle import Screen, Turtle
+
+import time
+
+ballSpeed = 1
+enemySpeed = 0.6
+playerSpeed = 10
+speed = 1
+
+playerScore = 0
+enemyScore = 0
+
+screen = Screen()
+screen.setup(width=600, height=600)
+screen.bgcolor("WHITE")
+screen.title("PONG")
+screen.tracer(0)
+
+screen.register_shape("blank", ((0,0), (0,0), (0,0)))
+
+game_is_on = True
+
+
+#instance left bar
+playerBar = Turtle("square")
+playerBar.shapesize(stretch_len=6, stretch_wid=0.5)
+playerBar.penup()
+playerBar.color("black")
+playerBar.setpos(-290, 0)
+playerBar.seth(90)
+
+#instance right bar
+enemyBar = Turtle("square")
+enemyBar.shapesize(stretch_len=6, stretch_wid=0.5)
+enemyBar.penup()
+enemyBar.color("black")
+enemyBar.setpos(280, 0)
+enemyBar.seth(270)
+
+#instance borders
+borderUp = Turtle("square")
+borderUp.penup()
+borderUp.shapesize(stretch_len=300, stretch_wid=0.5)
+borderUp.setpos(0, 290)
+borderDown = Turtle("square")
+borderDown.penup()
+borderDown.shapesize(stretch_len=300, stretch_wid=0.5)
+borderDown.setpos(0, -280)
+
+#instance ball
+ball = Turtle("circle")
+ball.penup()
+ball.shapesize(stretch_len=0.7, stretch_wid=0.7)
+ball.setpos(200, 0)
+
+#ball movement
+randomHeading = random.randint(130, 230)
+ball.seth(randomHeading)
+ballRicochet=180
+ball.forward(ballSpeed)
+
+#score text
+playerScoreText = Turtle("blank")
+playerScoreText.penup()
+playerScoreText.setpos(-120, 160)
+playerScoreText.color("gray")
+style = ('Courier', 30, 'bold')
+playerScoreText.write(playerScore, font=style)
+
+enemyScoreText = Turtle("blank")
+enemyScoreText.penup()
+enemyScoreText.setpos(60, 160)
+enemyScoreText.color("gray")
+enemyScoreText.write(enemyScore, font=style)
+
+
+#controls
+def buttonUp():
+    py = playerBar.ycor()
+    if(py <= 210):
+        playerBar.forward(1 * playerSpeed)
+
+def buttonDown():
+    py = playerBar.ycor()
+    if(py >= -200):
+        playerBar.back(1 * playerSpeed)
+
+#behavior
+def ricochetRandomly(distance):
+    #hard hit
+    if distance > 30:
+        value = random.randint(-40, 40)
+    #soft hit
+    elif distance < 30:
+        value = random.randint(-10, 10)
+
+    return(value)
+
+def artificialInteligence():
+    if ball.heading() < 90 or ball.heading() > 270:
+        if enemyBar.ycor() < ball.ycor():
+            if enemyBar.ycor() <= 210:
+
+                enemyBar.back(1 * enemySpeed)
+        elif enemyBar.ycor() > ball.ycor():
+            if enemyBar.ycor() >= -200:
+                enemyBar.forward(1 * enemySpeed)
+
+def restartGame():
+    ball.setpos(200, 0)
+    randomHeading = random.randint(130, 230)
+    ball.seth(randomHeading)
+
+def updateScore(playerScore, enemyScore):
+        playerScoreText.write(playerScore, font=style)
+        enemyScoreText.write(enemyScore, font=style)
+
+def randomSpeed():
+    randomSpeed = random.randint(8, 10) * 0.1
+    return randomSpeed
+
+def getBallDirection():
+    ballDirection = ""
+    if 90 < ball.heading() < 270:
+        ballDirection = "left"
+    else:
+        ballDirection = "right"
+
+    return ballDirection
+
+
+screen.onkeypress(buttonUp, "Up")
+screen.onkeypress(buttonDown, "Down")
+
+#run game
+while game_is_on:
+    screen.update()
+    screen.listen()
+    ball.forward(speed)
+    time.sleep(0.0001)
+    roundedBallCoordinateX = round(ball.xcor(), 0)
+    roundedBallCoordinateY = round(ball.ycor(), 0)
+
+    ballDirection = getBallDirection()
+    print(ballDirection)
+
+    ballDistanceToEnemyBar = ball.distance(enemyBar)
+    ballDistanceToPlayerBar = ball.distance(playerBar)
+
+    artificialInteligence()
+
+
+    #ball hits upper border
+    if roundedBallCoordinateY == borderUp.ycor() - 10:
+        if (ball.heading() > 90 and ball.heading() < 180):
+            ball.seth(ball.heading() + abs(2*(ball.heading() - 90) - 180))
+        elif (ball.heading() > 0 and ball.heading() < 90):
+            ball.seth(ball.heading() + abs(2*(ball.heading() - 90) - 180))
+
+    #ball hits lower border
+    if roundedBallCoordinateY == borderDown.ycor() + 10:
+        if (ball.heading() > 180 and ball.heading() < 270):
+            ball.seth(abs(ball.heading() - 360))
+        elif (ball.heading() > 270 and ball.heading() < 360):
+            ball.seth(abs(ball.heading() - 360))
+
+    #ball hits player bar
+    if roundedBallCoordinateX == playerBar.xcor() and abs(ball.distance(playerBar)) <= 60 and ballDirection == "left":
+        ball.seth( - (ball.heading() - 180) + ricochetRandomly(ballDistanceToPlayerBar))
+        speed = ballSpeed * randomSpeed()
+
+    #ball hits enemy bar
+    if roundedBallCoordinateX == enemyBar.xcor() and abs(ball.distance(enemyBar)) <= 60 and ballDirection == "right":
+        ball.seth( - (ball.heading() - 180) + ricochetRandomly(ballDistanceToEnemyBar))
+        speed = ballSpeed * randomSpeed()
+
+    #goes around going through walls bug 🤔
+    if speed == 0:
+        speed = 1
+
+    #ball leaves field
+    if ball.xcor() < -330:
+        enemyScoreText.clear()
+        enemyScore += 1
+        updateScore(playerScore, enemyScore)
+        restartGame()
+        ballSpeed=0
+        time.sleep(1)
+        speed = 1
+    if ball.xcor() > 330:
+        playerScoreText.clear()
+        playerScore += 1
+        updateScore(playerScore, enemyScore)
+        restartGame()
+        ballSpeed = 0
+        time.sleep(1)
+        speed = 1
+
+
+screen.exitonclick()
